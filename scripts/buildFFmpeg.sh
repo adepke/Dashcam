@@ -3,7 +3,7 @@
 baseDir=$(dirname $(realpath "$0"))
 installDir=$baseDir/../build/ffmpeg
 libDir=$installDir/build/lib
-numCores=16
+numCores=$(lscpu | grep -i "cpu(s):" | tr -dc '0-9')
 
 if [ -d $installDir ]
 then
