@@ -136,8 +136,11 @@ int main() {
 
 	encContext->width = 1920;
 	encContext->height = 1080;
+	encContext->bit_rate = 250000;
 	encContext->time_base = (AVRational){ 1, 30 };
 	encContext->pix_fmt = AV_PIX_FMT_YUV420P;
+	av_opt_set(encContext->priv_data, "preset", "superfast", 0);
+	av_opt_set(encContext->priv_data, "tune", "fastdecode", 0);
 
 	if (avcodec_open2(encContext, encCodec, nullptr) < 0) {
 		std::cout << "Failed to open the encoding codec.";
