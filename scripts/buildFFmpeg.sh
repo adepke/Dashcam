@@ -12,7 +12,7 @@ then
 fi
 
 mkdir -p $installDir/sources $installdir/bin && \
-chmod a+rw build
+chmod a+rw build && \
 cd $installDir/sources && \
 wget -O ffmpeg-5.1.2.tar.bz2 https://ffmpeg.org/releases/ffmpeg-5.1.2.tar.bz2 && \
 tar xjf ffmpeg-5.1.2.tar.bz2 && \
