@@ -12,6 +12,7 @@ extern "C"
     #include <libavutil/samplefmt.h>
     #include <libavutil/timestamp.h>
     #include <libavutil/opt.h>
+	#include <libavdevice/avdevice.h>
 }
 
 using namespace std::literals::chrono_literals;
@@ -58,6 +59,7 @@ void decode(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPa
 		}
 
 		while (ret >= 0) {
+			pkt = nullptr;
 			ret = avcodec_receive_packet(encCtx, pkt);
 			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 				break;
@@ -77,9 +79,16 @@ void decode(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPa
 }
 
 int main() {
-	std::ifstream vid{ "data/dashcamSample.mjpeg.avi", std::ios::binary };
-	if (!vid.is_open()) {
-		std::cout << "Failed to open video.\n";
+	avdevice_register_all();
+
+	auto deviceName = "/dev/video0";
+	auto* inputFormat = av_find_input_format("v4l2");
+	AVDictionary* options = nullptr;
+	av_dict_set(&options, "framerate", "30", 0);
+
+	AVFormatContext* inputContext = nullptr;
+	if (avformat_open_input(&inputContext, deviceName, inputFormat, &options) != 0) {
+		std::cout << "Failed to open input device.\n";
 		return 1;
 	}
 
@@ -157,41 +166,11 @@ int main() {
 		return 1;
 	}
 
-	auto packet = av_packet_alloc();
-	if (!packet) {
-		std::cout << "Failed to allocate video packet.\n";
-		return 1;
-	}
-
-	while (vid.good()) {
-		char buffer[4096];
-		vid.read(buffer, std::size(buffer));
-		auto bufferSize = vid.gcount();
-
+	AVPacket* packet = nullptr;
+	while (av_read_frame(inputContext, packet) >= 0) {
 		lastDecodeTime = std::chrono::high_resolution_clock::now();
-
-		size_t offset = 0;
-		while (bufferSize - offset > 0) {
-			auto ret = av_parser_parse2(
-				parser,
-				decContext,
-				&packet->data,
-				&packet->size,
-				(const uint8_t*)(buffer + offset),
-				bufferSize - offset,
-				AV_NOPTS_VALUE,
-				AV_NOPTS_VALUE,
-				0);
-			if (ret < 0) {
-				std::cout << "Failed to parse frame from buffer.\n";
-				return 1;
-			}
-			offset += ret;
-
-			if (packet->size) {
-				decode(decContext, encContext, frame, packet, outFile);
-			}
-		}
+		decode(decContext, encContext, frame, packet, outFile);
+		av_packet_unref(packet);
 	}
 
 	decode(decContext, encContext, frame, nullptr, outFile);  // Flush the decoder.
@@ -203,11 +182,12 @@ int main() {
 	}
 
 	fclose(outFile);
+	avformat_close_input(&inputContext);
 
 	av_parser_close(parser);
 	avcodec_free_context(&decContext);
 	avcodec_free_context(&encContext);
-	av_packet_free(&packet);
+	//av_packet_free(&packet);
     av_frame_free(&frame);
 
 	std::cout << "\nFRAMES: " << frames << "\n";
