@@ -14,9 +14,9 @@ fi
 mkdir -p $installDir/sources $installdir/bin && \
 chmod a+rw build && \
 cd $installDir/sources && \
-wget -O ffmpeg-5.1.2.tar.bz2 https://ffmpeg.org/releases/ffmpeg-5.1.2.tar.bz2 && \
-tar xjf ffmpeg-5.1.2.tar.bz2 && \
-cd ffmpeg-5.1.2 && \
+curl https://www.ffmpeg.org/releases/ffmpeg-5.1.2.tar.bz2 --output ffmpeg.tar.bz2 && \
+tar xjf ffmpeg.tar.bz2 && \
+cd ffmpeg && \
 PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" ./configure \
   --prefix="$installDir/build" \
   --pkg-config-flags="--static" \
