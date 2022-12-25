@@ -20,7 +20,7 @@ cd ffmpeg-5.1.2 && \
 PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" ./configure \
   --prefix="$installDir/build" \
   --pkg-config-flags="--static" \
-  --extra-cflags="-I$installDir/build/include" \
+  --extra-cflags="-I$installDir/build/include -Ofast -march=native -faggressive-loop-optimizations -fassociative-math -fomit-frame-pointer -flto" \
   --extra-ldflags="-L$installDir/build/lib" \
   --extra-libs="-lpthread -lm" \
   --ld="g++" \
