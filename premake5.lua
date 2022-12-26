@@ -1,3 +1,5 @@
+EnableDebugging = true
+
 newaction {
     trigger = "clean",
     description = "Cleans all build products",
@@ -29,12 +31,20 @@ project "dashcam"
     characterset "Unicode"
     staticruntime "On"
     warnings "Default"
-    exceptionhandling "Off"
-    optimize "Speed"
-    symbols "Off"
-    omitframepointer "On"
 
-    defines { "NDEBUG" }
+    if EnableDebugging then
+        exceptionhandling "On"
+        optimize "Off"
+        symbols "On"
+        defines { "DEBUG", "_DEBUG" }
+        buildoptions "-fsanitize=address"
+    else
+        exceptionhandling "Off"
+        optimize "Speed"
+        symbols "Off"
+        omitframepointer "On"
+        defines { "NDEBUG" }
+    end
 
     files { "src/**.cpp", "src/**.h" }
 
