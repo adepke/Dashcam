@@ -38,6 +38,7 @@ project "dashcam"
         symbols "On"
         defines { "DEBUG", "_DEBUG" }
         buildoptions "-fsanitize=address"
+        linkoptions { "-fsanitize=address", "-static-libasan" }
     else
         exceptionhandling "Off"
         optimize "Speed"
