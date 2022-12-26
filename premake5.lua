@@ -45,5 +45,4 @@ project "dashcam"
     includedirs { "src", "build/ffmpeg/build/include" }
     libdirs { "build/ffmpeg/build/lib" }
 
-    --links { "pthread", "dl", "rt", "avcodec", "avutil", "avformat", "swscale", "x264" }
-    links { "dl", "rt", "avcodec", "avutil", "avformat", "avdevice", "swscale", "z", "swresample", "m", "x264", "pthread" }
+    links { "atomic", "avdevice", "avfilter", "postproc", "avformat", "avcodec", "rt", "dl", "xcb", "z", "swresample", "swscale", "avutil", "m", "x264", "pthread" }
