@@ -132,16 +132,14 @@ int main() {
 
 	std::cout << "Found decoder " << decCodec->long_name << "\n";
 
-	auto parser = av_parser_init(decCodec->id);
-	if (!parser) {
-		std::cout << "Failed to create decoding parser.\n";
-		return 1;
-	}
-
 	auto decContext = avcodec_alloc_context3(decCodec);
 	if (!decContext) {
 		std::cout << "Failed to allocate decoder context.\n";
 		return 1;
+	}
+
+	if (decContext->codec_id == AV_CODEC_ID_RAWVIDEO) {
+		decContext->pix_fmt = AV_PIX_FMT_YUV420P;
 	}
 
 	if (avcodec_open2(decContext, decCodec, nullptr) < 0) {
@@ -208,7 +206,6 @@ int main() {
 	fclose(outFile);
 	avformat_close_input(&inputContext);
 
-	av_parser_close(parser);
 	avcodec_free_context(&decContext);
 	avcodec_free_context(&encContext);
 	//av_packet_free(&packet);
