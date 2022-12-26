@@ -99,10 +99,13 @@ int main() {
 
 	// Find the video stream.
 	int streamId = -1;
+	int streamCount = 0;
 	for (int i = 0; i < inputContext->nb_streams; ++i) {
 		if (inputContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-			streamId = i;
-			break;
+			if (streamId < 0) {
+				streamId = i;
+			}
+			streamCount++;
 		}
 	}
 
@@ -110,7 +113,7 @@ int main() {
 		std::cout << "Failed to find video stream in input device.\n";
 		return 1;
 	} else {
-		std::cout << "Using input video stream " << streamId << ".\n";
+		std::cout << "Found " << streamCount << " suitable streams, choosing stream " << streamId << ".\n";
 	}
 
 	FILE* outFile = fopen("data/encoded.h264", "wb");
