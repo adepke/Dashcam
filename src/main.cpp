@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <thread>
 #include <stdio.h>
 
 extern "C"
@@ -87,6 +88,7 @@ int main() {
 	av_dict_set(&options, "input_format", "mjpeg", 0);
 	av_dict_set(&options, "video_size", "1920x1080", 0);
 	av_dict_set(&options, "framerate", "30", 0);
+	const int frameRate = 30;
 
 	AVFormatContext* inputContext = nullptr;
 	if (avformat_open_input(&inputContext, deviceName, inputFormat, &options) != 0) {
@@ -170,7 +172,7 @@ int main() {
 	encContext->width = 1920;
 	encContext->height = 1080;
 	encContext->bit_rate = 250000;
-	encContext->time_base = (AVRational){ 1, 30 };
+	encContext->time_base = (AVRational){ 1, frameRate };
 	encContext->pix_fmt = AV_PIX_FMT_YUV420P;
 	av_opt_set(encContext->priv_data, "preset", "superfast", 0);
 	av_opt_set(encContext->priv_data, "tune", "fastdecode", 0);
@@ -191,10 +193,22 @@ int main() {
 	}
 
 	AVPacket* packet = av_packet_alloc();
+	auto lastFrame = std::chrono::high_resolution_clock::now();
 	while (av_read_frame(inputContext, packet) >= 0) {
 		lastDecodeTime = std::chrono::high_resolution_clock::now();
 		decode(decContext, encContext, frame, packet, outFile);
 		av_packet_unref(packet);
+
+		const auto now = std::chrono::high_resolution_clock::now();
+		const auto elapsedUs = std::chrono::duration_cast<std::chrono::microseconds>(now - lastFrame).count();
+		lastFrame = now;
+		const auto targetUs = 1.0 * 1000.0 * 1000.0 / (double)frameRate;
+		const int waitUs = targetUs - elapsedUs;
+		if (waitUs > 0) {
+			std::this_thread::sleep_for(std::chrono::microseconds{ waitUs });
+		} else {
+			std::cout << "Falling behind! (" << waitUs * -1.0 / 1000.0 << "ms late)\n";
+		}
 	}
 
 	decode(decContext, encContext, frame, nullptr, outFile);  // Flush the decoder.

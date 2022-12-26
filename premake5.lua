@@ -1,4 +1,4 @@
-EnableDebugging = true
+EnableDebugging = false
 
 newaction {
     trigger = "clean",
