@@ -5,13 +5,13 @@
 
 extern "C"
 {
-    #include <libavcodec/avcodec.h>
-    #include <libavcodec/version.h>
-    #include <libavformat/avformat.h>
-    #include <libavutil/imgutils.h>
-    #include <libavutil/samplefmt.h>
-    #include <libavutil/timestamp.h>
-    #include <libavutil/opt.h>
+	#include <libavcodec/avcodec.h>
+	#include <libavcodec/version.h>
+	#include <libavformat/avformat.h>
+	#include <libavutil/imgutils.h>
+	#include <libavutil/samplefmt.h>
+	#include <libavutil/timestamp.h>
+	#include <libavutil/opt.h>
 	#include <libavdevice/avdevice.h>
 }
 
@@ -188,7 +188,7 @@ int main() {
 	avcodec_free_context(&decContext);
 	avcodec_free_context(&encContext);
 	//av_packet_free(&packet);
-    av_frame_free(&frame);
+	av_frame_free(&frame);
 
 	std::cout << "\nFRAMES: " << frames << "\n";
 	std::cout << "AVG DECODE TIME: " << ((double)sumDecodeTime / (double)frames / 1000.0) << "ms\n";
