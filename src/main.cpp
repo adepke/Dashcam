@@ -83,7 +83,8 @@ int main() {
 	auto deviceName = "/dev/video0";
 	auto* inputFormat = av_find_input_format("v4l2");
 	AVDictionary* options = nullptr;
-	av_dict_set(&options, "input_format", "MJPG", 0);
+	// Device configurations: $ v4l2-ctl --device=/dev/video0 --list-formats-ext
+	av_dict_set(&options, "input_format", "mjpeg", 0);
 	av_dict_set(&options, "video_size", "1920x1080", 0);
 	av_dict_set(&options, "framerate", "30", 0);
 
@@ -140,7 +141,7 @@ int main() {
 	}
 
 	if (decContext->codec_id == AV_CODEC_ID_RAWVIDEO) {
-		decContext->pix_fmt = AV_PIX_FMT_YUV420P;
+		decContext->pix_fmt = AV_PIX_FMT_YUYV422;  // $ v4l2-ctl --all
 	}
 
 	if (avcodec_open2(decContext, decCodec, nullptr) < 0) {
