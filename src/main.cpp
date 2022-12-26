@@ -166,7 +166,7 @@ int main() {
 		return 1;
 	}
 
-	AVPacket* packet = nullptr;
+	AVPacket* packet = av_packet_alloc();
 	while (av_read_frame(inputContext, packet) >= 0) {
 		lastDecodeTime = std::chrono::high_resolution_clock::now();
 		decode(decContext, encContext, frame, packet, outFile);
