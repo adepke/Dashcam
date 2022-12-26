@@ -83,6 +83,8 @@ int main() {
 	auto deviceName = "/dev/video0";
 	auto* inputFormat = av_find_input_format("v4l2");
 	AVDictionary* options = nullptr;
+	av_dict_set(&options, "input_format", "MJPG", 0);
+	av_dict_set(&options, "video_size", "1920x1080", 0);
 	av_dict_set(&options, "framerate", "30", 0);
 
 	AVFormatContext* inputContext = nullptr;
@@ -138,8 +140,6 @@ int main() {
 	}
 
 	if (decContext->codec_id == AV_CODEC_ID_RAWVIDEO) {
-		decContext->width = 1920;
-		decContext->height = 1080;
 		decContext->pix_fmt = AV_PIX_FMT_YUV420P;
 	}
 
