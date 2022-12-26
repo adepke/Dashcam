@@ -59,7 +59,6 @@ void decode(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPa
 		}
 
 		while (ret >= 0) {
-			pkt = nullptr;
 			ret = avcodec_receive_packet(encCtx, pkt);
 			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 				break;
