@@ -139,6 +139,8 @@ int main() {
 	}
 
 	if (decContext->codec_id == AV_CODEC_ID_RAWVIDEO) {
+		decContext->width = 1920;
+		decContext->height = 1080;
 		decContext->pix_fmt = AV_PIX_FMT_YUV420P;
 	}
 
