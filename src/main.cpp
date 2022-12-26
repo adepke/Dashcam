@@ -92,6 +92,27 @@ int main() {
 		return 1;
 	}
 
+	if (avformat_find_stream_info(inputContext, nullptr) < 0) {
+		std::cout << "Failed to find stream info for input context.\n";
+		return 1;
+	}
+
+	// Find the video stream.
+	int streamId = -1;
+	for (int i = 0; i < inputContext->nb_streams; ++i) {
+		if (inputContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+			streamId = i;
+			break;
+		}
+	}
+
+	if (streamId < 0) {
+		std::cout << "Failed to find video stream in input device.\n";
+		return 1;
+	} else {
+		std::cout << "Using input video stream " << streamId << ".\n";
+	}
+
 	FILE* outFile = fopen("data/encoded.h264", "wb");
 	if (!outFile) {
 		std::cout << "Failed to create output video.\n";
@@ -100,7 +121,7 @@ int main() {
 
 	// DECODING
 
-	auto decCodec = avcodec_find_decoder(AV_CODEC_ID_MJPEG);
+	auto decCodec = avcodec_find_decoder(inputContext->streams[streamId]->codecpar->codec_id);
 	if (!decCodec) {
 		std::cout << "failed to find a suitable decoder.\n";
 		return 1;
