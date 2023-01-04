@@ -1,0 +1,16 @@
+[Unit]
+Description=Dashcam
+StartLimitBurst=10
+StartLimitIntervalSec=0
+StartLimitAction=reboot
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=pi
+WorkingDirectory=/home/pi/dashcam
+ExecStart=/home/pi/dashcam/build/bin/dashcam
+
+[Install]
+WantedBy=multi-user.target
