@@ -25,7 +25,7 @@ cd ffmpeg-5.1.2 && \
 PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" ./configure \
   --prefix="$installDir/build" \
   --pkg-config-flags="--static" \
-  --extra-cflags="-I$installDir/build/include -Ofast -march=native -faggressive-loop-optimizations -fassociative-math -fomit-frame-pointer -flto" \
+  --extra-cflags="-I$installDir/build/include -Ofast -faggressive-loop-optimizations -fomit-frame-pointer" \
   --extra-ldflags="-L$installDir/build/lib" \
   --extra-libs="-lpthread -lm" \
   --ld="g++" \
@@ -41,7 +41,6 @@ PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" .
   --enable-omx-rpi \
   --enable-mmal \
   --enable-neon \
-  --enable-rpi \
   --enable-hardcoded-tables && \
 PATH="$installDir/bin:$PATH" make -j$numCores && \
 make -j$numCores install && \
