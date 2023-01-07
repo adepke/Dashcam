@@ -54,6 +54,32 @@ project "dashcam"
     end
 
     includedirs { "src", "build/ffmpeg/build/include" }
-    libdirs { "build/ffmpeg/build/lib" }
+    libdirs {
+        "build/ffmpeg/build/lib",
+        "/opt/vc/lib"  -- MMAL
+    }
 
-    links { "atomic", "avdevice", "avfilter", "postproc", "avformat", "avcodec", "rt", "dl", "xcb", "z", "swresample", "swscale", "avutil", "m", "x264", "pthread" }
+    links {
+        "atomic",
+        "bcm_host",  -- MMAL
+        "mmal_core",
+        "mmal_util",
+        "mmal_vc_client",
+        "mmal",
+        "avdevice",
+        "avfilter",
+        "postproc",
+        "avformat",
+        "avcodec",
+        "rt",
+        "dl",
+        "xcb",
+        "z",
+        "swresample",
+        "swscale",
+        "avutil",
+        "bz2",
+        "m",
+        "x264",
+        "pthread"
+    }
