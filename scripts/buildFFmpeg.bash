@@ -5,6 +5,7 @@ set -e
 baseDir=$(dirname $(realpath "$0"))
 installDir=$baseDir/../build/ffmpeg
 libDir=$installDir/build/lib
+binDir=$installDir/bin
 numCores=$(nproc)
 
 if [[ $(type -P "ffmpeg") ]]
@@ -42,5 +43,6 @@ PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" .
 	--enable-hardcoded-tables
 PATH="$installDir/bin:$PATH" make -j$numCores
 sudo make install
-sudo echo "$libDir" | tee -a /etc/ld.so.conf.d/ffmpeg.conf
+sudo echo "$libDir" > /etc/ld.so.conf.d/ffmpeg.conf
 sudo ldconfig
+sudo cp $binDir/* /usr/local/bin/
