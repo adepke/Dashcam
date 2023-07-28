@@ -43,6 +43,6 @@ PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" .
 	--enable-hardcoded-tables
 PATH="$installDir/bin:$PATH" make -j$numCores
 sudo make install
-sudo echo "$libDir" > /etc/ld.so.conf.d/ffmpeg.conf
+echo "$libDir" | sudo tee /etc/ld.so.conf.d/ffmpeg.conf
 sudo ldconfig
 sudo cp $binDir/* /usr/local/bin/
