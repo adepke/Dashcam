@@ -1,0 +1,3 @@
+Installation:
+
+  $ ./scripts/install.bash
