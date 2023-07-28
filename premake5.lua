@@ -1,85 +1,77 @@
 EnableDebugging = false
 
 newaction {
-    trigger = "clean",
-    description = "Cleans all build products",
-    execute = function()
-        os.rmdir("./build")
-        os.remove("Makefile")
-    end
+	trigger = "clean",
+	description = "Cleans all build products",
+	execute = function()
+		os.rmdir("./build")
+		os.remove("Makefile")
+	end
 }
 
 workspace "dashcam"
-    configurations "base"
-    architecture "ARM64"
+	configurations "base"
+	architecture "ARM64"
 
 project "dashcam"
-    targetname "dashcam"
-    kind "ConsoleApp"
+	targetname "dashcam"
+	kind "ConsoleApp"
 
-    location "build"
-    basedir "../"
-    objdir "build/intermediate"
-    targetdir "build/bin"
+	location "build"
+	basedir "../"
+	objdir "build/intermediate"
+	targetdir "build/bin"
 
-    language "C++"
-    cppdialect "C++17"
+	language "C++"
+	cppdialect "C++17"
 
-    flags { "MultiProcessorCompile", "NoPCH" }
-    clr "Off"
-    rtti "Off"
-    characterset "Unicode"
-    staticruntime "On"
-    warnings "Default"
+	flags { "MultiProcessorCompile", "NoPCH" }
+	clr "Off"
+	rtti "Off"
+	characterset "Unicode"
+	staticruntime "On"
+	warnings "Default"
 
-    if EnableDebugging then
-        exceptionhandling "On"
-        optimize "Off"
-        symbols "On"
-        defines { "DEBUG", "_DEBUG" }
-        buildoptions "-fsanitize=address"
-        linkoptions { "-fsanitize=address", "-static-libasan" }
-    else
-        exceptionhandling "Off"
-        optimize "Speed"
-        symbols "Off"
-        omitframepointer "On"
-        defines { "NDEBUG" }
-    end
+	if EnableDebugging then
+		exceptionhandling "On"
+		optimize "Off"
+		symbols "On"
+		defines { "DEBUG", "_DEBUG" }
+		buildoptions "-fsanitize=address"
+		linkoptions { "-fsanitize=address", "-static-libasan" }
+	else
+		exceptionhandling "Off"
+		optimize "Speed"
+		symbols "Off"
+		omitframepointer "On"
+		defines { "NDEBUG" }
+	end
 
-    files { "src/**.cpp", "src/**.h" }
+	files { "src/**.cpp", "src/**.h" }
 
-    if _ACTION ~= "clean" then
-        os.execute("sudo ./scripts/buildFFmpeg.sh")
-    end
+	if _ACTION ~= "clean" then
+		os.execute("./scripts/buildFFmpeg.bash")
+	end
 
-    includedirs { "src", "build/ffmpeg/build/include" }
-    libdirs {
-        "build/ffmpeg/build/lib",
-        "/opt/vc/lib"  -- MMAL
-    }
+	includedirs { "src", "build/ffmpeg/build/include" }
+	libdirs {
+		"build/ffmpeg/build/lib"
+	}
 
-    links {
-        "atomic",
-        "bcm_host",  -- MMAL
-        "mmal_core",
-        "mmal_util",
-        "mmal_vc_client",
-        "mmal",
-        "avdevice",
-        "avfilter",
-        "postproc",
-        "avformat",
-        "avcodec",
-        "rt",
-        "dl",
-        "xcb",
-        "z",
-        "swresample",
-        "swscale",
-        "avutil",
-        "bz2",
-        "m",
-        "x264",
-        "pthread"
-    }
+	links {
+		"atomic",
+		"avdevice",
+		"avfilter",
+		"postproc",
+		"avformat",
+		"avcodec",
+		"rt",
+		"dl",
+		"z",
+		"swresample",
+		"swscale",
+		"avutil",
+		"m",
+		"x264",
+		"pthread"
+	}
