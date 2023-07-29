@@ -20,17 +20,19 @@ extern "C"
 
 #include "storage.h"
 
-void processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPacket* pkt, FILE* outFile) {
+size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPacket* pkt, FILE* outFile) {
 	auto ret = avcodec_send_packet(decCtx, pkt);
 	if (ret < 0) {
 		std::cerr << "Failed to send packet to context.\n";
-		return;  // Maybe not an error?
+		return 0;  // Maybe not an error?
 	}
+
+	size_t bytesWritten = 0;
 
 	while (ret >= 0) {
 		ret = avcodec_receive_frame(decCtx, frame);
 		if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-			return;
+			return bytesWritten;
 		} else if (ret < 0) {
 			std::cerr << "Decoding error.\n";
 			exit(1);  // Not recoverable.
@@ -39,7 +41,7 @@ void processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame
 		ret = avcodec_send_frame(encCtx, frame);
 		if (ret < 0) {
 			std::cerr << "Failed to encode frame.\n";
-			return;  // Recoverable, will just skip this frame.
+			return bytesWritten;  // Recoverable, will just skip this frame.
 		}
 
 		while (ret >= 0) {
@@ -53,8 +55,12 @@ void processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame
 
 			fwrite(pkt->data, 1, pkt->size, outFile);
 			av_packet_unref(pkt);
+
+			bytesWritten += pkt->size;
 		}
 	}
+
+	return bytesWritten;
 }
 
 int run(AVFormatContext* inputContext, AVCodecContext* decContext, AVCodecContext* encContext, int frameRate) {
@@ -80,7 +86,8 @@ int run(AVFormatContext* inputContext, AVCodecContext* decContext, AVCodecContex
 			}
 		}
 
-		processFrame(decContext, encContext, frame, packet, outFile);
+		auto bytes = processFrame(decContext, encContext, frame, packet, outFile);
+		spaceRemaining -= std::min(bytes, spaceRemaining);
 		av_packet_unref(packet);
 
 		const auto now = std::chrono::high_resolution_clock::now();
