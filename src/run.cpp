@@ -54,9 +54,8 @@ size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* fra
 			}
 
 			fwrite(pkt->data, 1, pkt->size, outFile);
-			av_packet_unref(pkt);
-
 			bytesWritten += pkt->size;
+			av_packet_unref(pkt);
 		}
 	}
 
