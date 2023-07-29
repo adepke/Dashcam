@@ -1,8 +1,11 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <chrono>
 #include <thread>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <string>
 
 extern "C"
 {
@@ -16,69 +19,15 @@ extern "C"
 	#include <libavdevice/avdevice.h>
 }
 
+#include "run.h"
+
 using namespace std::literals::chrono_literals;
 
-int frames = 0;
-std::chrono::time_point<std::chrono::high_resolution_clock> lastDecodeTime;
+int setupContext(int frameRate, AVFormatContext** input, AVCodecContext** decoder, AVCodecContext** encoder) {
+	*input = nullptr;
+	*decoder = nullptr;
+	*encoder = nullptr;
 
-size_t sumDecodeTime = 0;
-size_t sumEncodeTime = 0;
-
-void decode(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPacket* pkt, FILE* outFile) {
-	auto ret = avcodec_send_packet(decCtx, pkt);
-	if (ret < 0) {
-		std::cout << "Failed to send packet to context.\n";
-		//exit(1);
-		return;
-	}
-
-	while (ret >= 0) {
-		ret = avcodec_receive_frame(decCtx, frame);
-		if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-			return;
-		} else if (ret < 0) {
-			std::cout << "Decoding error.\n";
-			exit(1);
-		}
-
-		++frames;
-
-		auto now = std::chrono::high_resolution_clock::now();
-		auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now - lastDecodeTime).count();
-		//std::cout << "DECODED IN " << micros << "us.\n";
-		lastDecodeTime = now;
-		sumDecodeTime += micros;
-
-		// BEGIN ENCODING
-
-		auto start = std::chrono::high_resolution_clock::now();
-
-		ret = avcodec_send_frame(encCtx, frame);
-		if (ret < 0) {
-			std::cout << "Failed to encode frame " << frames-1 << "\n";
-			return;
-		}
-
-		while (ret >= 0) {
-			ret = avcodec_receive_packet(encCtx, pkt);
-			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-				break;
-			} else if (ret < 0) {
-				std::cout << "Encoding error.\n";
-				exit(1);
-			}
-
-			fwrite(pkt->data, 1, pkt->size, outFile);
-			av_packet_unref(pkt);
-		}
-
-		auto end = std::chrono::high_resolution_clock::now();
-		micros = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-		sumEncodeTime += micros;
-	}
-}
-
-int main() {
 	avdevice_register_all();
 
 	auto deviceName = "/dev/video0";
@@ -87,8 +36,7 @@ int main() {
 	// Device configurations: $ v4l2-ctl --device=/dev/video0 --list-formats-ext
 	av_dict_set(&options, "input_format", "mjpeg", 0);
 	av_dict_set(&options, "video_size", "1920x1080", 0);
-	av_dict_set(&options, "framerate", "30", 0);
-	const int frameRate = 30;
+	av_dict_set(&options, "framerate", std::to_string(frameRate).c_str(), 0);
 
 	AVFormatContext* inputContext = nullptr;
 	if (avformat_open_input(&inputContext, deviceName, inputFormat, &options) != 0) {
@@ -120,13 +68,7 @@ int main() {
 		std::cout << "Found " << streamCount << " suitable streams, choosing stream " << streamId << ".\n";
 	}
 
-	FILE* outFile = fopen("data/encoded.h264", "wb");
-	if (!outFile) {
-		std::cout << "Failed to create output video.\n";
-		return 1;
-	}
-
-	// DECODING
+	// Decoding
 
 	auto decCodec = avcodec_find_decoder(inputContext->streams[streamId]->codecpar->codec_id);
 	if (!decCodec) {
@@ -153,9 +95,11 @@ int main() {
 
 	std::cout << "Decode HW accel status: " << (decContext->hwaccel ? "ENABLED" : "DISABLED/UNKNOWN") << "\n";
 
-	// ENCODING
+	// Encoding
 
-	auto encCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	// Note: if this changes to MPEG1 or MPEG2, we need to write a special endcode.
+	//auto encCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	auto encCodec = avcodec_find_encoder_by_name("h264_v4l2m2m");
 	if (!encCodec) {
 		std::cout << "failed to find a suitable encoder.\n";
 		return 1;
@@ -184,52 +128,38 @@ int main() {
 
 	std::cout << "Encode HW accel status: " << (encContext->hwaccel ? "ENABLED" : "DISABLED/UNKNOWN") << "\n";
 
-	//
+	*input = inputContext;
+	*decoder = decContext;
+	*encoder = encContext;
 
-	auto frame = av_frame_alloc();
-	if (!frame) {
-		std::cout << "Failed to allocate video frame.\n";
+	return 0;
+}
+
+int main(int argc, char** argv) {
+	int frameRate = 30;
+
+	if (argc == 2) {
+		frameRate = std::stoi(argv[1]);
+	}
+
+	if (frameRate < 1 || frameRate > 60) {
+		std::cerr << "Invalid framerate specified.\n";
 		return 1;
 	}
 
-	AVPacket* packet = av_packet_alloc();
-	auto lastFrame = std::chrono::high_resolution_clock::now();
-	while (av_read_frame(inputContext, packet) >= 0) {
-		lastDecodeTime = std::chrono::high_resolution_clock::now();
-		decode(decContext, encContext, frame, packet, outFile);
-		av_packet_unref(packet);
+	AVFormatContext* input;
+	AVCodecContext* decoder;
+	AVCodecContext* encoder;
 
-		const auto now = std::chrono::high_resolution_clock::now();
-		const auto elapsedUs = std::chrono::duration_cast<std::chrono::microseconds>(now - lastFrame).count();
-		lastFrame = now;
-		const auto targetUs = 1.0 * 1000.0 * 1000.0 / (double)frameRate;
-		const int waitUs = targetUs - elapsedUs;
-		if (waitUs > 0) {
-			std::this_thread::sleep_for(std::chrono::microseconds{ waitUs });
-		} else {
-			std::cout << "Falling behind! (" << waitUs * -1.0 / 1000.0 << "ms late)\n";
-		}
+	if (setupContext(frameRate, &input, &decoder, &encoder) != 0) {
+		std::cout << "Failed to setup context.\n";
+		return 1;
 	}
 
-	decode(decContext, encContext, frame, nullptr, outFile);  // Flush the decoder.
-	avcodec_send_frame(encContext, nullptr);  // Flush the encoder.
+	// Create the data directory if if doesn't exist.
+	mkdir("data", S_IRWXU | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
 
-	if (encCodec->id == AV_CODEC_ID_MPEG1VIDEO || encCodec->id == AV_CODEC_ID_MPEG2VIDEO) {
-		uint8_t endcode[] = { 0, 0, 1, 0xb7 };
-		fwrite(endcode, 1, sizeof(endcode), outFile);
-	}
+	auto error = run(input, decoder, encoder, frameRate);
 
-	fclose(outFile);
-	avformat_close_input(&inputContext);
-
-	avcodec_free_context(&decContext);
-	avcodec_free_context(&encContext);
-	//av_packet_free(&packet);
-	av_frame_free(&frame);
-
-	std::cout << "\nFRAMES: " << frames << "\n";
-	std::cout << "AVG DECODE TIME: " << ((double)sumDecodeTime / (double)frames / 1000.0) << "ms\n";
-	std::cout << "AVG ENCODE TIME: " << ((double)sumEncodeTime / (double)frames / 1000.0) << "ms\n";
-
-	return 0;
+	return error;
 }
