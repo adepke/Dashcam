@@ -11,4 +11,3 @@ WantedBy=multi-user.target
 Type=simple
 Restart=always
 RestartSec=10
-User=pi

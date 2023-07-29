@@ -10,6 +10,7 @@ sudo apt install -y g++ libx264-dev
 make
 
 sudo cp utils/dashcam.service.template /etc/systemd/system/dashcam.service
+echo "User=$(whoami)" | sudo tee -a /etc/systemd/system/dashcam.service
 echo "WorkingDirectory=$(pwd)" | sudo tee -a /etc/systemd/system/dashcam.service
 echo "ExecStart=$(pwd)/build/bin/dashcam" | sudo tee -a /etc/systemd/system/dashcam.service
 sudo systemctl enable dashcam
