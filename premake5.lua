@@ -4,7 +4,8 @@ newaction {
 	trigger = "clean",
 	description = "Cleans all build products",
 	execute = function()
-		os.rmdir("./build")
+		os.execute("sudo rm /usr/local/bin/ffmpeg /usr/local/bin/ffprobe")
+		os.execute("rm -rf ./build")
 		os.remove("Makefile")
 	end
 }

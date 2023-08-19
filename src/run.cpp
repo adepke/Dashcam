@@ -1,3 +1,7 @@
+#include "run.h"
+#include "storage.h"
+#include "video.h"
+
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -17,8 +21,6 @@ extern "C"
 	#include <libavutil/opt.h>
 	#include <libavdevice/avdevice.h>
 }
-
-#include "storage.h"
 
 size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPacket* pkt, FILE* outFile) {
 	auto ret = avcodec_send_packet(decCtx, pkt);
@@ -62,7 +64,20 @@ size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* fra
 	return bytesWritten;
 }
 
-int run(AVFormatContext* inputContext, AVCodecContext* decContext, AVCodecContext* encContext, int frameRate) {
+int run(AVFormatContext* inputContext, int frameRate) {
+	AVCodecContext* decContext;
+	AVCodecContext* encContext;
+
+	if (!setupDecoder(&decContext, inputContext)) {
+		std::cerr << "Failed to setup decoder.\n";
+		return 1;
+	}
+
+	if (!setupEncoder(&encContext, frameRate)) {
+		std::cerr << "Failed to setup encoder.\n";
+		return 1;
+	}
+
 	size_t spaceRemaining = 0;
 	auto* outFile = getStorage(nullptr, spaceRemaining);
 	if (!outFile) {
@@ -81,6 +96,18 @@ int run(AVFormatContext* inputContext, AVCodecContext* decContext, AVCodecContex
 		if (spaceRemaining == 0) {
 			outFile = getStorage(outFile, spaceRemaining);
 			if (!outFile) {
+				return 1;
+			}
+
+			// Draining and flushing doesn't seem to work, just build a new encoder.
+			//avcodec_send_frame(encContext, nullptr);
+			//avcodec_flush_buffers(encContext);
+
+			avcodec_send_frame(encContext, nullptr);  // Flush the encoder.
+			avcodec_free_context(&encContext);
+
+			if (!setupEncoder(&encContext, frameRate)) {
+				std::cerr << "Failed to re-setup encoder.\n";
 				return 1;
 			}
 		}

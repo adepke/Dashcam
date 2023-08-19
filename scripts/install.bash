@@ -5,7 +5,7 @@ set -e
 baseDir=$(dirname $(realpath "$0"))
 
 cd $baseDir/../
-sudo apt install -y g++ libx264-dev
+sudo apt install -y g++ libx264-dev xz-utils
 ./premake5 gmake2
 make
 

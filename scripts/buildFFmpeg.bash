@@ -2,6 +2,8 @@
 
 set -e
 
+readonly ffmpegVersion="5.1.3"
+
 baseDir=$(dirname $(realpath "$0"))
 installDir=$baseDir/../build/ffmpeg
 libDir=$installDir/build/lib
@@ -14,7 +16,7 @@ then
 	exit 0
 fi
 
-echo "Building FFmpeg."
+echo "Building FFmpeg ${ffmpegVersion}."
 
 # Decoder/encoder options:
 # libx264 (SW), v4l2m2m (HW)
@@ -22,9 +24,9 @@ echo "Building FFmpeg."
 
 mkdir -p $installDir/sources $installdir/bin
 cd $installDir/sources
-curl https://www.ffmpeg.org/releases/ffmpeg-5.1.2.tar.bz2 --output ffmpeg.tar.bz2
-tar -xjf ffmpeg.tar.bz2
-cd ffmpeg-5.1.2
+curl https://www.ffmpeg.org/releases/ffmpeg-${ffmpegVersion}.tar.xz --output ffmpeg.tar.xz
+tar -xf ffmpeg.tar.xz
+cd ffmpeg-${ffmpegVersion}
 PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" ./configure \
 	--prefix="$installDir/build" \
 	--pkg-config-flags="--static" \

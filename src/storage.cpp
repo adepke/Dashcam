@@ -1,3 +1,5 @@
+#include "storage.h"
+
 #include <cstring>
 #include <time.h>
 #include <set>
@@ -15,7 +17,7 @@ std::string getDateTime() {
 
 FILE* getStorage(FILE* oldFile, size_t& space) {
 	constexpr const char* storageLocation = "./data/";
-	constexpr size_t bufferSpace = 64ULL * 1024ULL;  // 64 KB
+	constexpr size_t bufferSpace = 128ULL * 1024ULL;  // 128 KB
 	constexpr size_t maxFileSize = 512ULL * 1024ULL * 1024ULL;  // 512 MB
 
 	if (oldFile) {
