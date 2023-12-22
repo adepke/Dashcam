@@ -75,15 +75,21 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::cout << "Waiting 5 seconds before testing for operator...\n";
-    std::this_thread::sleep_for(5s);
+    // Skip upload in debug mode.
+    if (!debug) {
+        // Might be unnecessary if DHCP resolves before the service runs.
+        std::cout << "Waiting 3 seconds before testing for operator...\n";
+        std::this_thread::sleep_for(3s);
 
-    if (operatorConnected()) {
-        std::cout << "Operator connected, starting upload mode.\n";
+        if (operatorConnected()) {
+            std::cout << "Operator connected, starting upload mode.\n";
 
-        return uploadMedia();
+            return uploadMedia();
+        } else {
+            std::cout <<"No operator connected, starting record mode.\n";
+        }
     } else {
-        std::cout <<"No operator connected, starting record mode.\n";
+        std::cout << "Debug mode enabled.\n";
     }
 
     avdevice_register_all();
