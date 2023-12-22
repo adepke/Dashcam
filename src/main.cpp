@@ -37,9 +37,9 @@ bool operatorConnected() {
 
     if (getaddrinfo("www.google.com", "http", nullptr, &info) == 0) {
         hasConnection = true;
+        // getaddrinfo() doesn't seem to allocate on failure.
+        freeaddrinfo(info);
     }
-
-    freeaddrinfo(info);
 
     return hasConnection;
 }
