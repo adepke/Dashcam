@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
     bool debug = false;
 
     char c;
-    while ((c = getopt (argc, argv, "r:d")) != -1) {
+    while ((c = getopt(argc, argv, "r:d")) != -1) {
         switch (c) {
             case 'r':
                 frameRate = std::stoi(optarg);
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
                     return 1;
                 }
             default:
-                std::cerr << "Argument parsing error!\n";
+                std::cerr << "Argument parsing error! c='" << c << "'\n";
                 return 1;
         }
     }
