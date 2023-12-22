@@ -15,7 +15,7 @@ int uploadMedia() {
         std::cout << "Converting " << entry << " to MP4...\n";
         ++failures;
 
-        const auto convertCommand = "./python/convert.py --file " + entry.path().string();
+        const auto convertCommand = "./python/convert.py --file " + entry.path().string() + " --dest " + storageLocation;
         auto returnCode = system(convertCommand.c_str());
 
         std::array<char, 128> convertBuffer;
