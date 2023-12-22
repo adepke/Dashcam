@@ -13,6 +13,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <unistd.h>
+#include <getopt.h>
 
 extern "C"
 {
@@ -44,9 +46,28 @@ bool operatorConnected() {
 
 int main(int argc, char** argv) {
     int frameRate = 30;
+    bool debug = false;
 
-    if (argc == 2) {
-        frameRate = std::stoi(argv[1]);
+    while ((c = getopt (argc, argv, "r:d")) != -1) {
+        switch (c) {
+            case 'r':
+                frameRate = std::stoi(optarg);
+                break;
+            case 'd':
+                debug = true;
+                break;
+            case '?':
+                if (optopt == 'r') {
+                    std::cerr << "Option '" << optopt << "' requires an argument!\n";
+                    return 1;
+                } else {
+                    std::cerr << "Unrecognized option '" << optopt << "'!\n";
+                    return 1;
+                }
+            default:
+                std::cerr << "Argument parsing error!\n";
+                return 1;
+        }
     }
 
     if (frameRate < 1 || frameRate > 60) {
