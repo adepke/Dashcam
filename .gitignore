@@ -2,3 +2,5 @@ build/
 data/
 Makefile
 .vscode/
+client_secrets.json
+token.json
