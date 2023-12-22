@@ -78,9 +78,9 @@ int main(int argc, char** argv) {
 
     // Skip upload in debug mode.
     if (!debug) {
-        // Might be unnecessary if DHCP resolves before the service runs.
-        std::cout << "Waiting 3 seconds before testing for operator...\n";
-        std::this_thread::sleep_for(3s);
+        // DNS takes some time to resolve, this seems like a decent balance.
+        std::cout << "Waiting 4 seconds before testing for operator...\n";
+        std::this_thread::sleep_for(4s);
 
         if (operatorConnected()) {
             std::cout << "Operator connected, starting upload mode.\n";
