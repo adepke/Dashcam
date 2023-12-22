@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/env bash
 
 set -e
 
@@ -12,8 +12,8 @@ numCores=$(nproc)
 
 if [[ $(type -P "ffmpeg") ]]
 then
-	echo "FFmpeg installed."
-	exit 0
+    echo "FFmpeg installed."
+    exit 0
 fi
 
 echo "Building FFmpeg ${ffmpegVersion}."
@@ -28,21 +28,21 @@ curl https://www.ffmpeg.org/releases/ffmpeg-${ffmpegVersion}.tar.xz --output ffm
 tar -xf ffmpeg.tar.xz
 cd ffmpeg-${ffmpegVersion}
 PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" ./configure \
-	--prefix="$installDir/build" \
-	--pkg-config-flags="--static" \
-	--extra-cflags="-I$installDir/build/include -Ofast -faggressive-loop-optimizations -fomit-frame-pointer" \
-	--extra-ldflags="-L$installDir/build/lib" \
-	--extra-libs="-lpthread -lm" \
-	--ld="g++" \
-	--bindir="$installDir/bin" \
-	--arch=aarch64 \
-	--target-os=linux \
-	--enable-gpl \
-	--enable-nonfree \
-	--disable-doc \
-	--enable-libx264 \
-	--enable-neon \
-	--enable-hardcoded-tables
+    --prefix="$installDir/build" \
+    --pkg-config-flags="--static" \
+    --extra-cflags="-I$installDir/build/include -Ofast -faggressive-loop-optimizations -fomit-frame-pointer" \
+    --extra-ldflags="-L$installDir/build/lib" \
+    --extra-libs="-lpthread -lm" \
+    --ld="g++" \
+    --bindir="$installDir/bin" \
+    --arch=aarch64 \
+    --target-os=linux \
+    --enable-gpl \
+    --enable-nonfree \
+    --disable-doc \
+    --enable-libx264 \
+    --enable-neon \
+    --enable-hardcoded-tables
 PATH="$installDir/bin:$PATH" make -j$numCores
 sudo make install
 echo "$libDir" | sudo tee /etc/ld.so.conf.d/ffmpeg.conf

@@ -1,13 +1,15 @@
-#!/bin/bash
+#!/bin/env bash
 
 set -e
 
 baseDir=$(dirname $(realpath "$0"))
 
 cd $baseDir/../
-sudo apt install -y g++ libx264-dev xz-utils
+sudo apt install -y g++ libx264-dev xz-utils openssl libssl-dev python3 python3-distutils
 ./premake5 gmake2
 make
+
+./setupPython.bash
 
 sudo cp utils/dashcam.service.template /etc/systemd/system/dashcam.service
 echo "User=$(whoami)" | sudo tee -a /etc/systemd/system/dashcam.service
