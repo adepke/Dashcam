@@ -79,8 +79,8 @@ int main(int argc, char** argv) {
     // Skip upload in debug mode.
     if (!debug) {
         // DNS takes some time to resolve, this seems like a decent balance.
-        std::cout << "Waiting 4 seconds before testing for operator...\n";
-        std::this_thread::sleep_for(4s);
+        std::cout << "Waiting 5 seconds before testing for operator...\n";
+        std::this_thread::sleep_for(5s);
 
         if (operatorConnected()) {
             std::cout << "Operator connected, starting upload mode.\n";
