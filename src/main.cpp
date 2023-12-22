@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     int frameRate = 30;
     bool debug = false;
 
-    char c;
+    int c;
     while ((c = getopt(argc, argv, "r:d")) != -1) {
         switch (c) {
             case 'r':
