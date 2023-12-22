@@ -1,4 +1,9 @@
-EnableDebugging = false
+newoption {
+    trigger = "debugging",
+    value = "value",
+    default = "false",
+    description = "Compiles a debug build"
+}
 
 newaction {
     trigger = "clean",
@@ -33,20 +38,22 @@ project "dashcam"
     staticruntime "On"
     warnings "Default"
 
-    if EnableDebugging then
+    filter { "options:debugging=true" }
         exceptionhandling "On"
         optimize "Off"
         symbols "On"
         defines { "DEBUG", "_DEBUG" }
         buildoptions "-fsanitize=address"
         linkoptions { "-fsanitize=address", "-static-libasan" }
-    else
+    filter {}
+    
+    filter { "options:debugging=false" }
         exceptionhandling "On"
         optimize "Speed"
         symbols "Off"
         omitframepointer "On"
         defines { "NDEBUG" }
-    end
+    filter {}
 
     files { "src/**.cpp", "src/**.h" }
 
