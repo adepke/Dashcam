@@ -3,4 +3,5 @@ data/
 Makefile
 .vscode/
 client_secrets.json
+service_secrets.json
 token.json

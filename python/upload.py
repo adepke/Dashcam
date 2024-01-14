@@ -6,11 +6,8 @@ from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 #from pydrive2.settings import LoadSettingsFile
 
-def main():
-    parser = argparse.ArgumentParser(description="Tool to upload mp4 files to Google Drive")
-    parser.add_argument("--file", dest="file", required=True)
-    parsedArgs = parser.parse_args()
-
+# Logs in using OAuth2 client, which requires a local webserver auth flow everytime
+def login_oauth_client():
     # Authorization is a nightmare, here's what worked for me:
     # Visit https://developers.google.com/drive/api/quickstart/python and follow their quickstart.py example
     # Using the client_secrets.json file downloaded from the web console, this generates a refresh token called token.json in the working directory
@@ -24,7 +21,33 @@ def main():
     gauth.LocalWebserverAuth()
     # Only works for native apps, not web apps
     #gauth.CommandLineAuth()
-    drive = GoogleDrive(gauth)
+    return gauth
+
+# Logs in using a Google service account, which should work for headless operation
+def login_service_account():
+    settings = {
+        "client_config_backend": "service",
+        "service_config:": {
+            "client_json_file_path": "service_secrets.json"
+        }
+    }
+
+    gauth = GoogleAuth(settings=settings)
+    gauth.ServiceAuth()
+
+    return gauth
+
+def login():
+    #return login_oauth_client()
+    return login_service_account()
+
+def main():
+    parser = argparse.ArgumentParser(description="Tool to upload mp4 files to Google Drive")
+    parser.add_argument("--file", dest="file", required=True)
+    parsedArgs = parser.parse_args()
+
+    auth = login()
+    drive = GoogleDrive(auth)
 
     parentFolder="1VaQvic_Aa_nYA254GADsrxaieSwxuZg-"
     f = drive.CreateFile({
