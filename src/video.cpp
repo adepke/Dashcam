@@ -106,7 +106,7 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
 
     enc->width = 1920;
     enc->height = 1080;
-    enc->bit_rate = 4000000;
+    enc->bit_rate = 2000000;
     enc->time_base = (AVRational){ 1, frameRate };
     enc->framerate = (AVRational){ frameRate, 1 };
     enc->pix_fmt = AV_PIX_FMT_YUV420P;
