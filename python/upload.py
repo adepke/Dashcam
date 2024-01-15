@@ -27,7 +27,7 @@ def login_oauth_client():
 def login_service_account():
     settings = {
         "client_config_backend": "service",
-        "service_config:": {
+        "service_config": {
             "client_json_file_path": "service_secrets.json"
         }
     }
