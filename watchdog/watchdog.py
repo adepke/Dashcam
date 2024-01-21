@@ -82,9 +82,7 @@ def watchdogRunner(queue, cv):
             print(f"Exception thrown: {exception}\nRebooting listener...", file=sys.stderr)
 
             with cv:
-                for message in messages:
-                    queue.append(DashcamState.DEAD)
-
+                queue.append(DashcamState.DEAD)
                 cv.notify_all()
 
 def processMessage(parsedArgs, message):
