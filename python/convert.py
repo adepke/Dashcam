@@ -15,7 +15,7 @@ def main():
     if parsedArgs.destination is not None:
         dest = os.path.join(parsedArgs.destination, dest)
 
-    ffmpegCmd = f"ffmpeg -y -hide_banner -loglevel error -r 30 -c:v h264_v4l2m2m -i {parsedArgs.file} -b:v 4M -c:a copy -c:v h264_v4l2m2m {dest}"
+    ffmpegCmd = f"ffmpeg -y -hide_banner -loglevel error -r 30 -c:v h264_v4l2m2m -i {parsedArgs.file} -b:v 2M -c:a copy -c:v h264_v4l2m2m {dest}"
 
     cmd = subprocess.Popen(ffmpegCmd.split(" "), stderr=subprocess.PIPE)
     _, stderr = cmd.communicate()
