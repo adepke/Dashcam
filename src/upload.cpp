@@ -1,5 +1,6 @@
 #include "upload.h"
 #include "storage.h"
+#include "status.h"
 
 #include <iostream>
 #include <filesystem>
@@ -14,6 +15,8 @@ int uploadMedia() {
     for (const auto& entry : std::filesystem::directory_iterator{ storageLocation }) {
         std::cout << "Converting " << entry << " to MP4...\n";
         ++failures;
+
+        setState(DashcamState::CONVERTING);
 
         const auto convertCommand = "./python/convert.py --file " + entry.path().string() + " --dest " + storageLocation;
         auto returnCode = system(convertCommand.c_str());
@@ -42,6 +45,7 @@ int uploadMedia() {
         }
 
         std::cout << "Uploading...\n";
+        setState(DashcamState::UPLOADING);
 
         auto convertedPath = std::filesystem::path(convertStdout);
         convertedPath.replace_extension(".mp4");

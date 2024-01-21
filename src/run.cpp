@@ -65,6 +65,8 @@ size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* fra
 }
 
 int run(AVFormatContext* inputContext, int frameRate) {
+    setState(DashcamState::RECORDING);
+
     AVCodecContext* decContext;
     AVCodecContext* encContext;
 

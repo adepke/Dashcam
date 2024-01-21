@@ -1,6 +1,7 @@
 #include "run.h"
 #include "video.h"
 #include "upload.h"
+#include "status.h"
 
 #include <iostream>
 #include <fstream>
@@ -74,6 +75,14 @@ int main(int argc, char** argv) {
     if (frameRate < 1 || frameRate > 60) {
         std::cerr << "Invalid framerate specified.\n";
         return 1;
+    }
+
+    if (!initializeStatus()) {
+        std::cerr << "Watchdog disabled!\n";
+
+        shutdownStatus();
+    } else {
+        setState(DashcamState::STARTING);
     }
 
     // Skip upload in debug mode.
