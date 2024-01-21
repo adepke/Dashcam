@@ -62,7 +62,9 @@ def watchdogRunner(queue, cv):
 
     # Repeat this loop until the OS shuts down.
     while True:
+        print("Listening for incoming connection...")
         client, _ = listener.accept()
+        print("Connected!")
 
         try:
             while True:
@@ -86,6 +88,7 @@ def watchdogRunner(queue, cv):
                 cv.notify_all()
 
 def processMessage(parsedArgs, message):
+    print(f"Setting status to {message}")
     # TODO: Implement light animation instead of fixed colors.
 
     if message == DashcamState.DEAD:
