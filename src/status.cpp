@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <unistd.h>
 
 int socketHandle = -1;
 
@@ -18,7 +19,7 @@ bool initializeStatus() {
     sockaddr_in watchdogConnection;
     watchdogConnection.sin_family = AF_INET;
     watchdogConnection.sin_port = htons(watchdogPort);
-    inet_aton("127.0.0.1", &watchdogConnection.sin_addr.s_addr);
+    inet_aton("127.0.0.1", &watchdogConnection.sin_addr);
 
     int error = connect(socketHandle, (sockaddr*)&watchdogConnection, sizeof(watchdogConnection));
     if (error != 0) {

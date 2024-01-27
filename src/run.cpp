@@ -1,6 +1,7 @@
 #include "run.h"
 #include "storage.h"
 #include "video.h"
+#include "status.h"
 
 #include <iostream>
 #include <fstream>
