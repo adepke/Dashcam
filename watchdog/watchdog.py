@@ -110,15 +110,17 @@ def processMessage(parsedArgs, message):
 
 def main():
     parser = argparse.ArgumentParser(description="Watchdog service to monitor the dashcam and report status to GPIO")
-    parser.add_argument("-r", "--gpio-red", type=int, default=16, required=False)
-    parser.add_argument("-g", "--gpio-green", type=int, default=17, required=False)
-    parser.add_argument("-b", "--gpio-blue", type=int, default=18, required=False)
+    parser.add_argument("-r", "--gpio-red", type=int, default=7, required=False)
+    parser.add_argument("-g", "--gpio-green", type=int, default=9, required=False)
+    parser.add_argument("-b", "--gpio-blue", type=int, default=15, required=False)
     parsedArgs = parser.parse_args()
 
     gpio.setmode(gpio.BCM)
     gpio.setup(parsedArgs.gpio_red, gpio.OUT)
     gpio.setup(parsedArgs.gpio_green, gpio.OUT)
     gpio.setup(parsedArgs.gpio_blue, gpio.OUT)
+
+    setLight(parsedArgs, StatusColors.RED)
 
     messageQueue = list()
     queueCondition = threading.Condition()
