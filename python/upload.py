@@ -43,7 +43,7 @@ def login():
 
 def main():
     parser = argparse.ArgumentParser(description="Tool to upload mp4 files to Google Drive")
-    parser.add_argument("--file", dest="file", required=True)
+    parser.add_argument("-f", "--file", required=True)
     parsedArgs = parser.parse_args()
 
     auth = login()

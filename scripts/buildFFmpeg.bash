@@ -2,7 +2,7 @@
 
 set -e
 
-readonly ffmpegVersion="5.1.3"
+readonly ffmpegVersion="6.1.1"
 
 baseDir=$(dirname $(realpath "$0"))
 installDir=$baseDir/../build/ffmpeg

@@ -16,6 +16,15 @@ extern "C"
 
 bool setupInput(AVFormatContext** input, int frameRate) {
     auto deviceName = "/dev/video0";
+
+    // Configure the device to be in the correct format. FFmpeg doesn't always configure it properly without this.
+    auto v4l2CommandBase = std::string{ "v4l2-ctl --device=" } + deviceName;
+    auto v4l2Set = v4l2CommandBase + " --set-fmt-video=width=1920,height=1080,pixelformat=MJPG";
+    auto v4l2Get = v4l2CommandBase + " --get-fmt-video";
+
+    system(v4l2Set.c_str());
+    system(v4l2Get.c_str());
+
     auto* inputFormat = av_find_input_format("v4l2");
     AVDictionary* options = nullptr;
     // Device configurations: $ v4l2-ctl --device=/dev/video0 --list-formats-ext
@@ -112,8 +121,10 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
     enc->pix_fmt = AV_PIX_FMT_YUV420P;
     enc->gop_size = 10;  // https://github.com/FFmpeg/FFmpeg/blob/3d5edb89e75fe3ab3a6757208ef121fa2b0f54c7/doc/examples/encode_video.c#L119
     enc->max_b_frames = 1;  // See above
-    av_opt_set(enc->priv_data, "preset", "veryfast", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
-    av_opt_set(enc->priv_data, "tune", "zerolatency", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
+    // TODO: CRF might be unused by v4l2m2m encoder!
+    av_opt_set(enc, "crf", "16", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#a1.ChooseaCRFvalue
+    av_opt_set(enc, "preset", "veryfast", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
+    av_opt_set(enc, "tune", "zerolatency", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
 
     if (avcodec_open2(enc, encCodec, nullptr) < 0) {
         std::cerr << "Failed to open the encoding codec.";
