@@ -80,9 +80,12 @@ bool setupDecoder(AVCodecContext** decoder, AVFormatContext* inputContext) {
         return false;
     }
 
-    if (dec->codec_id == AV_CODEC_ID_RAWVIDEO) {
-        dec->pix_fmt = AV_PIX_FMT_YUYV422;  // $ v4l2-ctl --all
+    if (dec->codec_id != AV_CODEC_ID_RAWVIDEO) {
+        std::cerr << "Unexpected decoder codec! Codec ID is: " << dec->codec_id << "\n";
+        return false;
     }
+
+    dec->pix_fmt = AV_PIX_FMT_YUYV422;  // $ v4l2-ctl --all
 
     if (avcodec_open2(dec, decCodec, nullptr) < 0) {
         std::cerr << "Failed to open the decoding codec.\n";
@@ -116,6 +119,7 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
     enc->width = 1920;
     enc->height = 1080;
     enc->bit_rate = 2000000;
+    enc->compression_level = 0;
     enc->time_base = (AVRational){ 1, frameRate };
     enc->framerate = (AVRational){ frameRate, 1 };
     enc->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -125,6 +129,7 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
     av_opt_set(enc, "crf", "16", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#a1.ChooseaCRFvalue
     av_opt_set(enc, "preset", "veryfast", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
     av_opt_set(enc, "tune", "zerolatency", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
+    av_opt_set(enc, "bufsize", "1000000", 0);
 
     if (avcodec_open2(enc, encCodec, nullptr) < 0) {
         std::cerr << "Failed to open the encoding codec.";
