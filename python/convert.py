@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/usr/bin/python3
 
 import argparse
 import os
@@ -24,7 +24,7 @@ def main():
         decoder = "h264"
         encoder = "libx264"
 
-    ffmpegCmd = f"ffmpeg -y -hide_banner -loglevel error -r 30 -c:v {decoder} -i {parsedArgs.file} -b:v 2M -c:a copy -c:v {encoder} {dest}"
+    ffmpegCmd = f"ffmpeg -y -hide_banner -loglevel error -r 30 -c:v {decoder} -vtag YV12 -i {parsedArgs.file} -b:v 8M -c:a copy -c:v {encoder} {dest}"
 
     cmd = subprocess.Popen(ffmpegCmd.split(" "), stderr=subprocess.PIPE)
     _, stderr = cmd.communicate()

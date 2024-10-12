@@ -21,10 +21,12 @@ extern "C"
     #include <libavutil/timestamp.h>
     #include <libavutil/opt.h>
     #include <libavdevice/avdevice.h>
+    #include <libavfilter/buffersink.h>
+    #include <libavfilter/buffersrc.h>
 }
 
-size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* frame, AVPacket* pkt, FILE* outFile) {
-    auto ret = avcodec_send_packet(decCtx, pkt);
+size_t processFrame(const VideoContext& context, AVFrame* frame, AVPacket* pkt, FILE* outFile) {
+    auto ret = avcodec_send_packet(context.decodeCtx, pkt);
     if (ret < 0) {
         std::cerr << "Failed to send packet to context.\n";
         return 0;  // Maybe not an error?
@@ -33,7 +35,7 @@ size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* fra
     size_t bytesWritten = 0;
 
     while (ret >= 0) {
-        ret = avcodec_receive_frame(decCtx, frame);
+        ret = avcodec_receive_frame(context.decodeCtx, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             return bytesWritten;
         } else if (ret < 0) {
@@ -41,14 +43,45 @@ size_t processFrame(AVCodecContext* decCtx, AVCodecContext* encCtx, AVFrame* fra
             exit(1);  // Not recoverable.
         }
 
-        ret = avcodec_send_frame(encCtx, frame);
-        if (ret < 0) {
-            std::cerr << "Failed to encode frame.\n";
-            return bytesWritten;  // Recoverable, will just skip this frame.
+        // Received a frame from the decoder, now send it through the filter graph.
+        if (av_buffersrc_add_frame_flags(context.filterSourceCtx, frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0) {
+            std::cerr << "Failed to feed frame into filter graph.\n";
+            exit(1);
         }
 
+        auto filterFrame = av_frame_alloc();
+
+        // Retrieve the frame from the filter graph output and push it through the encoder.
+        while (true) {
+            ret = av_buffersink_get_frame(context.filterSinkCtx, filterFrame);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                break;
+            } else if (ret < 0) {
+                std::cerr << "buffer sink error.\n";
+                exit(1);  // Not recoverable.
+            }
+
+            // Received the filtered output, forward it to the encoder now.
+            ret = avcodec_send_frame(context.encodeCtx, filterFrame);
+            if (ret == AVERROR(EAGAIN)) {
+                // The encoder can't receive a packet right now, drain the output first. This does lose the current frame, which probably isn't great.
+                break;
+            } else if (ret < 0) {
+                std::cout << "Failed to encode frame: code=" << ret << "\n";
+                return bytesWritten;  // Recoverable, will just skip this frame.
+            }
+
+            // For some strange reason, continuing the loop to call av_buffersink_get_frame again will break the encoder. This is strange, since get_frame just returns
+            // EAGAIN to signify no data is available (expectedly). No idea what's going on but I have a simple frame pipeline so I know there's only one frame to be
+            // expected here.
+            break;
+        }
+
+        av_frame_unref(filterFrame);
+
+        // Done with the filter pipeline, receive the final packet out of the encoder.
         while (ret >= 0) {
-            ret = avcodec_receive_packet(encCtx, pkt);
+            ret = avcodec_receive_packet(context.encodeCtx, pkt);
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 break;
             } else if (ret < 0) {
@@ -70,6 +103,9 @@ int run(AVFormatContext* inputContext, int frameRate) {
 
     AVCodecContext* decContext;
     AVCodecContext* encContext;
+    AVFilterGraph* filterGraph;
+    AVFilterContext* bufferSourceContext;
+    AVFilterContext* bufferSinkContext;
 
     if (!setupDecoder(&decContext, inputContext)) {
         std::cerr << "Failed to setup decoder.\n";
@@ -78,6 +114,11 @@ int run(AVFormatContext* inputContext, int frameRate) {
 
     if (!setupEncoder(&encContext, frameRate)) {
         std::cerr << "Failed to setup encoder.\n";
+        return 1;
+    }
+
+    if (!setupFilterGraph(&filterGraph, &bufferSourceContext, &bufferSinkContext, decContext, encContext)) {
+        std::cerr << "Failed to setup filter graph.\n";
         return 1;
     }
 
@@ -92,6 +133,13 @@ int run(AVFormatContext* inputContext, int frameRate) {
         std::cerr << "Failed to allocate video frame.\n";
         return 1;
     }
+
+    VideoContext videoContext{
+        .decodeCtx = decContext,
+        .encodeCtx = encContext,
+        .filterSourceCtx = bufferSourceContext,
+        .filterSinkCtx = bufferSinkContext
+    };
 
     AVPacket* packet = av_packet_alloc();
     auto lastFrame = std::chrono::high_resolution_clock::now();
@@ -115,7 +163,7 @@ int run(AVFormatContext* inputContext, int frameRate) {
             }
         }
 
-        auto bytes = processFrame(decContext, encContext, frame, packet, outFile);
+        auto bytes = processFrame(videoContext, frame, packet, outFile);
         spaceRemaining -= std::min(bytes, spaceRemaining);
         av_packet_unref(packet);
 
@@ -132,7 +180,7 @@ int run(AVFormatContext* inputContext, int frameRate) {
         lastFrame = now;
     }
 
-    processFrame(decContext, encContext, frame, nullptr, outFile);  // Flush the decoder.
+    processFrame(videoContext, frame, nullptr, outFile);  // Flush the decoder.
     avcodec_send_frame(encContext, nullptr);  // Flush the encoder.
 
     /*
@@ -144,9 +192,9 @@ int run(AVFormatContext* inputContext, int frameRate) {
 
     fclose(outFile);
     avformat_close_input(&inputContext);
-
-    avcodec_free_context(&decContext);
+    avfilter_graph_free(&filterGraph);
     avcodec_free_context(&encContext);
+    avcodec_free_context(&decContext);
     //av_packet_free(&packet);
     av_frame_free(&frame);
 

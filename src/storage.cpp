@@ -57,7 +57,7 @@ FILE* getStorage(FILE* oldFile, size_t& space) {
         return nullptr;
     }
 
-    std::cout << "Created new file: '" << fileName.c_str() << "', max size of " << maxFileSize << "\n";
+    std::cout << "Created new file: '" << fileName.c_str() << "', max size of " << maxFileSize << " bytes\n";
 
     space = maxFileSize;
 
