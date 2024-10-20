@@ -7,7 +7,11 @@
 #include <set>
 #include <cstdio>
 
+#include <tracy/Tracy.hpp>
+
 int uploadMedia() {
+    ZoneScoped;
+
     // Find all clips and upload them to the remote storage.
     // TODO: Pipeline conversion and uploading to greatly speed this up.
     int failures = 0;

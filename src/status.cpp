@@ -7,9 +7,13 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <tracy/Tracy.hpp>
+
 int socketHandle = -1;
 
 bool initializeStatus() {
+    ZoneScoped;
+
     socketHandle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (socketHandle < 0) {
         std::cerr << "Failed to open status socket!\n";
@@ -31,6 +35,8 @@ bool initializeStatus() {
 }
 
 void shutdownStatus() {
+    ZoneScoped;
+
     if (socketHandle >= 0) {
         close(socketHandle);
         socketHandle = -1;
@@ -38,6 +44,8 @@ void shutdownStatus() {
 }
 
 void setState(const DashcamState state) {
+    ZoneScoped;
+
     if (socketHandle >= 0) {
         char buffer[2];
         buffer[0] = static_cast<char>(state);

@@ -24,6 +24,9 @@ def main():
         decoder = "h264"
         encoder = "libx264"
 
+    # Unfortunately, the h264 decoder does not support user-defined pixel format, so we cannot tell it to parse the media as yuvj422p (deferred filtering). Similarly, the v4l2m2m H264 encoder
+    # does not support any output pixel format besides yuv420p, so conversion there does not work either. I'm not sure if there's any way to pull this off.
+    #ffmpegCmd = f"ffmpeg -y -hide_banner -loglevel error -r 30 -c:v {decoder} -vtag YV12 -pix_fmt yuvj422p -i {parsedArgs.file} -pix_fmt yuv420p -b:v 8M -c:a copy -c:v {encoder} {dest}"
     ffmpegCmd = f"ffmpeg -y -hide_banner -loglevel error -r 30 -c:v {decoder} -vtag YV12 -i {parsedArgs.file} -b:v 8M -c:a copy -c:v {encoder} {dest}"
 
     cmd = subprocess.Popen(ffmpegCmd.split(" "), stderr=subprocess.PIPE)

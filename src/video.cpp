@@ -16,7 +16,11 @@ extern "C"
     #include <libavfilter/buffersrc.h>
 }
 
+#include <tracy/Tracy.hpp>
+
 bool setupInput(AVFormatContext** input, int frameRate) {
+    ZoneScoped;
+
     auto deviceName = "/dev/video0";
 
     // Configure the device to be in the correct format. FFmpeg doesn't always configure it properly without this.
@@ -50,6 +54,8 @@ bool setupInput(AVFormatContext** input, int frameRate) {
 }
 
 bool setupDecoder(AVCodecContext** decoder, AVFormatContext* inputContext) {
+    ZoneScoped;
+
     // Find the video stream.
     int streamId = -1;
     int streamCount = 0;
@@ -96,6 +102,20 @@ bool setupDecoder(AVCodecContext** decoder, AVFormatContext* inputContext) {
 
     std::cout << "Decoder pixel format is: " << dec->pix_fmt << "\n";
 
+    // Try to enable multithreading, if supported by the codec.
+    dec->thread_count = 0;
+
+    if (decCodec->capabilities & AV_CODEC_CAP_FRAME_THREADS) {
+        std::cout << "Decoder multithreading with frame threads.\n";
+        dec->thread_type = FF_THREAD_FRAME;
+    } else if (decCodec->capabilities & AV_CODEC_CAP_SLICE_THREADS) {
+        std::cout << "Decoder multithreading with slice threads.\n";
+        dec->thread_type = FF_THREAD_SLICE;
+    } else {
+        std::cout << "Decoder multithreading is unsupported, using a single thread.\n";
+        dec->thread_count = 1;  // Force single thread.
+    }
+
     if (avcodec_open2(dec, decCodec, nullptr) < 0) {
         std::cerr << "Failed to open the decoding codec.\n";
         return false;
@@ -109,6 +129,8 @@ bool setupDecoder(AVCodecContext** decoder, AVFormatContext* inputContext) {
 }
 
 bool setupEncoder(AVCodecContext** encoder, int frameRate) {
+    ZoneScoped;
+
     // Note: if this changes to MPEG1 or MPEG2, we need to write a special endcode.
     //auto encCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
     auto encCodec = avcodec_find_encoder_by_name("h264_v4l2m2m");
@@ -153,6 +175,15 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
 }
 
 bool setupFilterGraph(AVFilterGraph** graph, AVFilterContext** filterSource, AVFilterContext** filterSink, AVCodecContext* decoder, AVCodecContext* encoder) {
+
+    ZoneScoped;
+
+#if DEFERRED_FILTERING
+    // When deferring filtering, just set the AV points to null and early out.
+    *graph = nullptr;
+    *filterSource = nullptr;
+    *filterSink = nullptr;
+#else
     const AVFilter* bufferSource = avfilter_get_by_name("buffer");
     const AVFilter* bufferSink = avfilter_get_by_name("buffersink");
     AVFilterContext* bufferSourceContext;
@@ -217,6 +248,7 @@ bool setupFilterGraph(AVFilterGraph** graph, AVFilterContext** filterSource, AVF
     *graph = grph;
     *filterSource = bufferSourceContext;
     *filterSink = bufferSinkContext;
+#endif
 
     return true;
 }

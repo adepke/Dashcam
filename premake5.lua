@@ -1,8 +1,22 @@
 newoption {
-    trigger = "debugging",
-    value = "value",
+    trigger = "debug",
+    value = "bool",
     default = "false",
     description = "Compiles a debug build"
+}
+
+newoption {
+    trigger = "profile",
+    value = "bool",
+    default = "false",
+    description = "Compiles with Tracy profiling metrics"
+}
+
+newoption {
+    trigger = "defer-filtering",
+    value = "bool",
+    default = "false",
+    description = "Defer filtering, primarily pixel format conversions, until the media is ready to be converted and uploaded. This can improve performance since filtering is not happening in hardware, but might not be possible to do in FFmpeg!"
 }
 
 newaction {
@@ -38,7 +52,7 @@ project "dashcam"
     staticruntime "On"
     warnings "Default"
 
-    filter { "options:debugging=true" }
+    filter { "options:debug=true" }
         exceptionhandling "On"
         optimize "Off"
         symbols "On"
@@ -46,8 +60,8 @@ project "dashcam"
         buildoptions "-fsanitize=address"
         linkoptions { "-fsanitize=address", "-static-libasan" }
     filter {}
-    
-    filter { "options:debugging=false" }
+
+    filter { "options:debug=false" }
         exceptionhandling "On"
         optimize "Speed"
         symbols "Off"
@@ -55,13 +69,29 @@ project "dashcam"
         defines { "NDEBUG" }
     filter {}
 
+    filter { "options:defer-filtering=true" }
+        defines { "DEFERRED_FILTERING=1" }
+    filter {}
+
+    filter { "options:defer-filtering=false" }
+        defines { "DEFERRED_FILTERING=0" }
+    filter {}
+
     files { "src/**.cpp", "src/**.h" }
+
+    -- Enable Tracy client during profiling builds
+    filter { "options:profile=true" }
+        defines { "TRACY_ENABLE" }
+    filter {}
+
+    files { "thirdparty/tracy/public/TracyClient.cpp" }
 
     if _ACTION ~= "clean" then
         os.execute("./scripts/buildFFmpeg.bash")
     end
 
-    includedirs { "src", "thirdparty/*", "build/ffmpeg/build/include" }
+    includedirs { "src", "build/ffmpeg/build/include", "thirdparty/tracy/public" }
+
     libdirs {
         "build/ffmpeg/build/lib"
     }

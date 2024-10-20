@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
 set -e
+set -u
 
 baseDir=$(dirname $(realpath "$0"))
 installDir=$baseDir/../build/ffmpeg

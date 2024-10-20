@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
 set -e
+set -u
 
 readonly ffmpegVersion="6.1.1"
 

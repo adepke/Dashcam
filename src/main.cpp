@@ -29,9 +29,13 @@ extern "C"
     #include <libavdevice/avdevice.h>
 }
 
+#include <tracy/Tracy.hpp>
+
 using namespace std::literals::chrono_literals;
 
 bool operatorConnected() {
+    ZoneScoped;
+
     // Check if we have a DNS server from being connected to an operator.
     bool hasConnection = false;
     struct addrinfo* info;

@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include <tracy/Tracy.hpp>
+
 std::string getDateTime() {
     time_t now = time(0);
     auto t = *localtime(&now);
@@ -16,6 +18,8 @@ std::string getDateTime() {
 }
 
 FILE* getStorage(FILE* oldFile, size_t& space) {
+    ZoneScoped;
+
     constexpr size_t bufferSpace = 512ULL * 1024ULL * 1024ULL;  // 512 MB
     constexpr size_t maxFileSize = 512ULL * 1024ULL * 1024ULL;  // 512 MB
 
@@ -27,6 +31,8 @@ FILE* getStorage(FILE* oldFile, size_t& space) {
     auto freeSpace = std::filesystem::space(storageLocation).available - bufferSpace;
 
     while (freeSpace < maxFileSize) {
+        ZoneScopedN("storage_cull");
+
         // Delete the oldest recording, by file name.
         std::set<std::filesystem::path> entries;
         for (const auto& entry : std::filesystem::directory_iterator{ storageLocation }) {

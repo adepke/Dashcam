@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
 set -e
+set -u
 
 curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
 trap "rm ./get-pip.py" EXIT

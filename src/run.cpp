@@ -25,8 +25,57 @@ extern "C"
     #include <libavfilter/buffersrc.h>
 }
 
+#include <tracy/Tracy.hpp>
+
+AVFrame* filterFrame(const VideoContext& context, AVFrame* preFilterFrame) {
+    AVFrame* postFilterFrame = nullptr;
+
+#if DEFERRED_FILTERING
+    // Filtering is deferred, so just skip this entirely and return the preFilterFrame.
+    postFilterFrame = preFilterFrame;
+#else
+    // Received a frame from the decoder, now send it through the filter graph.
+    {
+        ZoneScopedN("filter_graph_fill");
+
+        if (av_buffersrc_add_frame_flags(context.filterSourceCtx, preFilterFrame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0) {
+            std::cerr << "Failed to feed frame into filter graph.\n";
+            exit(1);
+        }
+    }
+
+    postFilterFrame = av_frame_alloc();
+
+    // Retrieve the frame from the filter graph output and push it through the encoder.
+    while (true) {
+        ZoneScopedN("filter_graph_drain");
+
+        auto ret = av_buffersink_get_frame(context.filterSinkCtx, postFilterFrame);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            break;
+        } else if (ret < 0) {
+            std::cerr << "Buffer sink error.\n";
+            exit(1);  // Not recoverable.
+        }
+
+        // For some strange reason, continuing the loop to call av_buffersink_get_frame again will break the encoder. This is strange, since get_frame just returns
+        // EAGAIN to signify no data is available (expectedly). No idea what's going on but I have a simple frame pipeline so I know there's only one frame to be
+        // expected here.
+        break;
+    }
+#endif
+
+    return postFilterFrame;
+}
+
 size_t processFrame(const VideoContext& context, AVFrame* frame, AVPacket* pkt, FILE* outFile) {
-    auto ret = avcodec_send_packet(context.decodeCtx, pkt);
+    ZoneScoped;
+
+    int ret;
+    {
+        ZoneScopedN("decoder_fill");
+        ret = avcodec_send_packet(context.decodeCtx, pkt);
+    }
     if (ret < 0) {
         std::cerr << "Failed to send packet to context.\n";
         return 0;  // Maybe not an error?
@@ -35,6 +84,8 @@ size_t processFrame(const VideoContext& context, AVFrame* frame, AVPacket* pkt, 
     size_t bytesWritten = 0;
 
     while (ret >= 0) {
+        ZoneScopedN("decoder_drain");
+
         ret = avcodec_receive_frame(context.decodeCtx, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             return bytesWritten;
@@ -43,44 +94,28 @@ size_t processFrame(const VideoContext& context, AVFrame* frame, AVPacket* pkt, 
             exit(1);  // Not recoverable.
         }
 
-        // Received a frame from the decoder, now send it through the filter graph.
-        if (av_buffersrc_add_frame_flags(context.filterSourceCtx, frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0) {
-            std::cerr << "Failed to feed frame into filter graph.\n";
-            exit(1);
+        auto* filteredFrame = filterFrame(context, frame);
+
+        {
+            ZoneScopedN("encoder_fill");
+            ret = avcodec_send_frame(context.encodeCtx, filteredFrame);
         }
 
-        auto filterFrame = av_frame_alloc();
+#if !DEFERRED_FILTERING
+        av_frame_unref(filteredFrame);
+#endif
 
-        // Retrieve the frame from the filter graph output and push it through the encoder.
-        while (true) {
-            ret = av_buffersink_get_frame(context.filterSinkCtx, filterFrame);
-            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-                break;
-            } else if (ret < 0) {
-                std::cerr << "buffer sink error.\n";
-                exit(1);  // Not recoverable.
-            }
-
-            // Received the filtered output, forward it to the encoder now.
-            ret = avcodec_send_frame(context.encodeCtx, filterFrame);
-            if (ret == AVERROR(EAGAIN)) {
-                // The encoder can't receive a packet right now, drain the output first. This does lose the current frame, which probably isn't great.
-                break;
-            } else if (ret < 0) {
-                std::cout << "Failed to encode frame: code=" << ret << "\n";
-                return bytesWritten;  // Recoverable, will just skip this frame.
-            }
-
-            // For some strange reason, continuing the loop to call av_buffersink_get_frame again will break the encoder. This is strange, since get_frame just returns
-            // EAGAIN to signify no data is available (expectedly). No idea what's going on but I have a simple frame pipeline so I know there's only one frame to be
-            // expected here.
-            break;
+        if (ret == AVERROR(EAGAIN)) {
+            // The encoder can't receive a packet right now, drain the output first. This does lose the current frame, which probably isn't great.
+            continue;
+        } else if (ret < 0) {
+            std::cerr << "Failed to encode frame: code=" << ret << "\n";
+            return bytesWritten;  // Recoverable, will just skip this frame.
         }
 
-        av_frame_unref(filterFrame);
-
-        // Done with the filter pipeline, receive the final packet out of the encoder.
         while (ret >= 0) {
+            ZoneScopedN("encoder_drain");
+
             ret = avcodec_receive_packet(context.encodeCtx, pkt);
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 break;
@@ -89,7 +124,10 @@ size_t processFrame(const VideoContext& context, AVFrame* frame, AVPacket* pkt, 
                 exit(1);  // Potentially recoverable?
             }
 
-            fwrite(pkt->data, 1, pkt->size, outFile);
+            {
+                ZoneScopedN("write_to_disk");
+                fwrite(pkt->data, 1, pkt->size, outFile);
+            }
             bytesWritten += pkt->size;
             av_packet_unref(pkt);
         }
@@ -99,6 +137,8 @@ size_t processFrame(const VideoContext& context, AVFrame* frame, AVPacket* pkt, 
 }
 
 int run(AVFormatContext* inputContext, int frameRate) {
+    ZoneScoped;
+
     setState(DashcamState::RECORDING);
 
     AVCodecContext* decContext;
@@ -144,6 +184,8 @@ int run(AVFormatContext* inputContext, int frameRate) {
     AVPacket* packet = av_packet_alloc();
     auto lastFrame = std::chrono::high_resolution_clock::now();
     while (av_read_frame(inputContext, packet) >= 0) {
+        ZoneScopedN("av_read_frame loop");
+
         if (spaceRemaining == 0) {
             outFile = getStorage(outFile, spaceRemaining);
             if (!outFile) {
