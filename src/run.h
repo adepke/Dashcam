@@ -6,10 +6,12 @@ struct AVFilterContext;
 
 struct VideoContext
 {
+    int frameRate;
+    AVFormatContext* inputCtx;
     AVCodecContext* decodeCtx;
-    AVCodecContext* encodeCtx;
     AVFilterContext* filterSourceCtx;
     AVFilterContext* filterSinkCtx;
+    AVCodecContext* encodeCtx;
 };
 
 int run(AVFormatContext* inputContext, int frameRate);

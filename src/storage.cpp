@@ -17,14 +17,14 @@ std::string getDateTime() {
     return buffer;
 }
 
-FILE* getStorage(FILE* oldFile, size_t& space) {
+Storage getStorage(Storage& oldStorage) {
     ZoneScoped;
 
     constexpr size_t bufferSpace = 512ULL * 1024ULL * 1024ULL;  // 512 MB
     constexpr size_t maxFileSize = 512ULL * 1024ULL * 1024ULL;  // 512 MB
 
-    if (oldFile) {
-        fclose(oldFile);
+    if (oldStorage.file) {
+        fclose(oldStorage.file);
     }
 
     // Determine max storage space.
@@ -43,13 +43,13 @@ FILE* getStorage(FILE* oldFile, size_t& space) {
             std::cerr << "Could not find any files to remove from the storage location '" << storageLocation << "'. Not enough "
                 << "space to accommodate a full video. Free space: " << freeSpace << ", requested: "
                 << maxFileSize << "\n";
-            return nullptr;
+            return {};
         }
 
         auto target = *entries.begin();
         if (!std::filesystem::remove(target)) {
             std::cerr << "Failed to remove file: '" << target << "'\n";
-            return nullptr;
+            return {};
         }
 
         freeSpace = std::filesystem::space(storageLocation).available - bufferSpace;
@@ -60,12 +60,13 @@ FILE* getStorage(FILE* oldFile, size_t& space) {
     FILE* outFile = fopen(fileName.c_str(), "w+");
     if (!outFile) {
         std::cerr << "Failed to create output video.\n";
-        return nullptr;
+        return {};
     }
 
     std::cout << "Created new file: '" << fileName.c_str() << "', max size of " << maxFileSize << " bytes\n";
 
-    space = maxFileSize;
-
-    return outFile;
+    return Storage{
+        .space = maxFileSize,
+        .file = outFile
+    };
 }

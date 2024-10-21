@@ -4,4 +4,9 @@
 
 constexpr const char* storageLocation = "./data/";
 
-FILE* getStorage(FILE* oldFile, size_t& space);
+struct Storage {
+    size_t space = 0;
+    FILE* file = nullptr;
+};
+
+Storage getStorage(Storage& oldStorage);
