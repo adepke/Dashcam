@@ -11,6 +11,7 @@
 #include <list>
 #include <atomic>
 #include <thread>
+#include <cassert>
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -48,7 +49,7 @@ void inputWorker(const VideoContext& context, std::atomic<bool>& flag, Channel<A
 
     while (flag.load(std::memory_order_relaxed)) {
         ZoneScopedN("input_job");
-        ZoneColor(zoneColors[job++ % sizeof(zoneColors)]);
+        ZoneColor(zoneColors[job++ % (sizeof(zoneColors) / sizeof(*zoneColors))]);
 
         auto* packet = av_packet_alloc();
 
@@ -85,7 +86,7 @@ void decodeWorker(const VideoContext& context, Channel<AVPacket*>& input, Channe
 
     while (true) {
         ZoneScopedN("decode_job");
-        ZoneColor(zoneColors[job++ % sizeof(zoneColors)]);
+        ZoneColor(zoneColors[job++ % (sizeof(zoneColors) / sizeof(*zoneColors))]);
 
         auto* packet = input.pop();
         if (!packet) {
@@ -103,7 +104,8 @@ void decodeWorker(const VideoContext& context, Channel<AVPacket*>& input, Channe
         }
 
         // Cleanup
-        av_packet_free(&packet);
+        // #TEMP TESTING
+        //av_packet_free(&packet);
 
         while (ret >= 0) {
             auto* frame = av_frame_alloc();
@@ -112,6 +114,7 @@ void decodeWorker(const VideoContext& context, Channel<AVPacket*>& input, Channe
                 ZoneScopedN("decoder_drain");
                 ret = avcodec_receive_frame(context.decodeCtx, frame);
             }
+
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                 // Finished the job, return to the parent loop.
                 break;
@@ -133,7 +136,7 @@ void filterWorker(const VideoContext& context, Channel<AVFrame*>& input, Channel
 
     while (true) {
         ZoneScopedN("filter_job");
-        ZoneColor(zoneColors[job++ % sizeof(zoneColors)]);
+        ZoneColor(zoneColors[job++ % (sizeof(zoneColors) / sizeof(*zoneColors))]);
 
         auto* preFilter = input.pop();
         if (!preFilter) {
@@ -187,7 +190,7 @@ void encodeWorker(const VideoContext& context, Channel<AVFrame*>& input, Channel
 
     while (true) {
         ZoneScopedN("encode_job");
-        ZoneColor(zoneColors[job++ % sizeof(zoneColors)]);
+        ZoneColor(zoneColors[job++ % (sizeof(zoneColors) / sizeof(*zoneColors))]);
 
         auto* frame = input.pop();
         if (!frame) {
@@ -257,7 +260,7 @@ void outputWorker(const VideoContext& context, Channel<AVPacket*>& input, Channe
 
     while (true) {
         ZoneScopedN("output_job");
-        ZoneColor(zoneColors[job++ % sizeof(zoneColors)]);
+        ZoneColor(zoneColors[job++ % (sizeof(zoneColors) / sizeof(*zoneColors))]);
 
         auto* packet = input.pop();
         if (!packet) {

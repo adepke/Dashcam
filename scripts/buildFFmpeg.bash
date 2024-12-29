@@ -6,9 +6,9 @@ set -u
 readonly ffmpegVersion="6.1.1"
 
 baseDir=$(dirname $(realpath "$0"))
-installDir=$baseDir/../build/ffmpeg
-libDir=$installDir/build/lib
-binDir=$installDir/bin
+installDir=${baseDir}/../build/ffmpeg
+libDir=${installDir}/build/lib
+binDir=${installDir}/bin
 numCores=$(nproc)
 
 if [[ $(type -P "ffmpeg") ]]
@@ -23,19 +23,22 @@ echo "Building FFmpeg ${ffmpegVersion}."
 # libx264 (SW), v4l2m2m (HW)
 # See: https://trac.ffmpeg.org/wiki/HWAccelIntro
 
-mkdir -p $installDir/sources $installdir/bin
-cd $installDir/sources
+# Other notes:
+# - LTO was disabled due to taking a crazy long time to statically link against the dashcam binary
+
+mkdir -p ${installDir}/sources ${installDir}/bin
+cd ${installDir}/sources
 curl https://www.ffmpeg.org/releases/ffmpeg-${ffmpegVersion}.tar.xz --output ffmpeg.tar.xz
 tar -xf ffmpeg.tar.xz
 cd ffmpeg-${ffmpegVersion}
-PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" ./configure \
+PATH="${installDir}/bin:${PATH}" PKG_CONFIG_PATH="${installDir}/build/lib/pkgconfig" ./configure \
     --prefix="$installDir/build" \
     --pkg-config-flags="--static" \
-    --extra-cflags="-I$installDir/build/include -Ofast -faggressive-loop-optimizations -fomit-frame-pointer" \
-    --extra-ldflags="-L$installDir/build/lib" \
+    --extra-cflags="-I${installDir}/build/include -Ofast -faggressive-loop-optimizations -fomit-frame-pointer" \
+    --extra-ldflags="-L${installDir}/build/lib" \
     --extra-libs="-lpthread -lm" \
     --ld="g++" \
-    --bindir="$installDir/bin" \
+    --bindir="${installDir}/bin" \
     --arch=aarch64 \
     --target-os=linux \
     --enable-gpl \
@@ -44,8 +47,8 @@ PATH="$installDir/bin:$PATH" PKG_CONFIG_PATH="$installDir/build/lib/pkgconfig" .
     --enable-libx264 \
     --enable-neon \
     --enable-hardcoded-tables
-PATH="$installDir/bin:$PATH" make -j$numCores
+PATH="${installDir}/bin:${PATH}" make -j${numCores}
 sudo make install
-echo "$libDir" | sudo tee /etc/ld.so.conf.d/ffmpeg.conf
+echo "${libDir}" | sudo tee /etc/ld.so.conf.d/ffmpeg.conf
 sudo ldconfig
-sudo cp $binDir/* /usr/local/bin/
+sudo cp ${binDir}/* /usr/local/bin/

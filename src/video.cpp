@@ -31,17 +31,19 @@ bool setupInput(AVFormatContext** input, int frameRate) {
     system(v4l2Set.c_str());
     system(v4l2Get.c_str());
 
-    auto* inputFormat = av_find_input_format("v4l2");
+    auto* inputFormat = av_find_input_format("v4l2");  // Capturing from a v4l2 device
     AVDictionary* options = nullptr;
     // Device configurations: $ v4l2-ctl --device=/dev/video0 --list-formats-ext
     av_dict_set(&options, "input_format", "mjpeg", 0);  // "rawvideo" can be used with this camera instead, but it's far slower as it's uncompressed. 6 FPS max @ 1080p
     //av_dict_set(&options, "pixel_format", "yuyv422", 0);  // Don't need to set the format, let FFMPEG decide.
     av_dict_set(&options, "video_size", "1920x1080", 0);
-    av_dict_set(&options, "framerate", std::to_string(frameRate).c_str(), 0);
+    // #TEMP: testing, this doesn't impact it
+    //av_dict_set(&options, "framerate", std::to_string(frameRate).c_str(), 0);
 
     *input = nullptr;
-    if (avformat_open_input(input, deviceName, inputFormat, &options) != 0) {
-        std::cerr << "Failed to open input device.\n";
+    if (auto ret = avformat_open_input(input, deviceName, inputFormat, &options); ret != 0) {
+        char buffer[256];
+        std::cerr << "Failed to open input device: error: " << av_make_error_string(buffer, sizeof(buffer), ret) << "\n";
         return false;
     }
 
@@ -132,8 +134,7 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
     ZoneScoped;
 
     // Note: if this changes to MPEG1 or MPEG2, we need to write a special endcode.
-    //auto encCodec = avcodec_find_encoder(AV_CODEC_ID_H264);
-    auto encCodec = avcodec_find_encoder_by_name("h264_v4l2m2m");
+    auto encCodec = avcodec_find_encoder_by_name("h264_v4l2m2m");  // Can use AV_CODEC_ID_H264 for the SW encoder.
     if (!encCodec) {
         std::cerr << "Failed to find a suitable encoder.\n";
         return false;
@@ -149,7 +150,7 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
 
     enc->width = 1920;
     enc->height = 1080;
-    enc->bit_rate = 100000000;  // 100kb/s
+    enc->bit_rate = 200000000;  // 200kb/s
     enc->compression_level = 0;
     enc->time_base = (AVRational){ 1, frameRate };
     enc->framerate = (AVRational){ frameRate, 1 };
@@ -161,6 +162,9 @@ bool setupEncoder(AVCodecContext** encoder, int frameRate) {
     av_opt_set(enc, "preset", "veryfast", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
     av_opt_set(enc, "tune", "zerolatency", 0);  // https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
     av_opt_set(enc, "bufsize", "1000000", 0);
+
+    // #TEMP: testing with pipelined execution
+    av_opt_set(enc, "num_capture_buffers", "64", 0);
 
     if (avcodec_open2(enc, encCodec, nullptr) < 0) {
         std::cerr << "Failed to open the encoding codec.";
